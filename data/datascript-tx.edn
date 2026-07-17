@@ -1,0 +1,25 @@
+;; data/datascript-tx.edn — DataScript tx-data derived from src/association/facts.cljc
+;; `association.facts/catalog` (ADR-2607141700 Wave 0). Same shape as sibling files.
+
+[#:association-rule{:id "canadianchamber.founding-1925-winnipeg"
+                     :title "At a national conference in Winnipeg, business leaders resolved to create a unified voice for Canadian commerce, founding what became the Canadian Chamber of Commerce (chamber.ca official History page, corroborated by Wikidata Q132656646 inception statement)"
+                     :association "canadianchamber"
+                     :isic "9411"
+                     :country "CAN"
+                     :kind :governance-program
+                     :url "https://chamber.ca/about/history/"
+                     :url-provenance :official-chamber-ca
+                     :established-date "1925"
+                     :retrieved-at "2026-07-17"
+                     :topic [:governance]}
+ #:association-rule{:id "canadianchamber.first-agm-1926-board-of-trade"
+                     :title "First Annual Meeting held in Saint John, New Brunswick, where the organization became the Canadian Board of Trade (chamber.ca official History page)"
+                     :association "canadianchamber"
+                     :isic "9411"
+                     :country "CAN"
+                     :kind :governance-program
+                     :url "https://chamber.ca/about/history/"
+                     :url-provenance :official-chamber-ca
+                     :established-date "1926"
+                     :retrieved-at "2026-07-17"
+                     :topic [:governance]}]
