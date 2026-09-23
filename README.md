@@ -35,11 +35,15 @@ municipality
 ([`cloud-itonami-municipality-can-toronto`](https://github.com/cloud-itonami/cloud-itonami-municipality-can-toronto)),
 and association (this repo).
 
-Both entries here were directly WebFetch-verified against
-`chamber.ca`'s own official "History" page, which rendered
-successfully — no fallback needed. The 1925 founding date is
-independently corroborated by Wikidata (Q132656646)'s own "inception"
-statement.
+Every entry cites a page on `chamber.ca` (History, Governance,
+ATA Carnet, Policy Resolutions, Committees, FAQ) and carries the
+verbatim span of that page the claim rests on (`:source-quote`),
+taken from the page body rather than the site menu that every page
+repeats. The History page names office-holders next to four of its
+milestones; the quotes stop before each name, and the two "first
+woman" milestones are not recorded because no span states them
+without the name. The 1925 founding date is also Wikidata
+(Q132656646)'s "inception" statement (see `organization.edn`).
 
 ## Scope
 
@@ -53,21 +57,33 @@ fabricate one.
 
 ## Data
 
-- `src/association/facts.cljc` — the catalog, source of truth.
-- `schema/association-rule.edn` — DataScript schema.
-- `data/datascript-tx.edn` — derived DataScript tx-data (query this
-  alongside other `cloud-itonami`/`etzhayyim` compliance-fact sources via
+- `data/datascript-tx.edn` — the catalog. Facts are authored here and
+  nowhere else (DataScript tx-data; query it alongside other
+  `cloud-itonami`/`etzhayyim` compliance-fact sources via
   `com-junkawasaki/root`'s `scripts/compliance-fact-query.cljs`).
+- `src/association/facts.kotoba` (Clojure reading) and
+  `src/association_facts.kotoba` (Kotoba port) — both GENERATED from the
+  data file by `scripts/gen-kotoba-port.cljk`. Do not hand-edit.
+- `schema/association-rule.edn` — DataScript schema.
 
-Both entries directly WebFetch-verified against `chamber.ca`'s own
-History page: the 1925 Winnipeg conference where business leaders
-resolved to create a unified voice for Canadian commerce, and the
-1926 First Annual Meeting in Saint John, New Brunswick, where the
-organization became the Canadian Board of Trade.
+```bash
+# 1. edit data/datascript-tx.edn, then regenerate both readings
+kbb --backend sci scripts/gen-kotoba-port.cljk
+kbb --backend sci scripts/gen-kotoba-port.cljk --check   # exit 1 if either reading drifted
+
+# 2. check the catalog against its own sources
+kbb --backend sci scripts/verify-catalog.cljk            # structural, offline
+kbb --backend sci scripts/verify-catalog.cljk --live     # fetch every :url, require every quote
+```
+
+`verify-catalog` exits 0 (checked, nothing wrong), 1 (findings printed)
+or 2 (REFUSED: it could not read the catalog or a source, which is
+neither a pass nor a finding).
 
 ## License
 
 AGPL-3.0-or-later (matches the `cloud-itonami-iso3166-*` /
 `-municipality-*` / `-assoc-*` / `-lei-*` convention). Policy text
 itself remains the Canadian Chamber of Commerce's; this repo stores
-only citation metadata (id/title/url/dates), not full text.
+only citation metadata (id/title/url/dates) and the short verbatim
+span each claim rests on, not full text.
