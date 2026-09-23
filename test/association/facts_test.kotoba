@@ -1,10 +1,11 @@
 (ns association.facts-test
-  (:require [clojure.test :refer [deftest is]]
-            [association.facts :as facts]))
+  (:require [clojure.test :refer [deftest is testing]]
+            [association.facts :as facts]
+            [clojure.string :as str]))
 
 (deftest canadianchamber-has-spec-basis
   (let [sb (facts/spec-basis "canadianchamber")]
-    (is (= 2 (count sb)))
+    (is (= 18 (count sb)))
     (is (every? #(= "9411" (:association-rule/isic %)) sb))
     (is (every? #(= "CAN" (:association-rule/country %)) sb))))
 
@@ -19,6 +20,53 @@
     (is (= ["ibec"] (:missing-associations c)))))
 
 (deftest by-topic-filters
-  (is (= 2 (count (facts/by-topic "canadianchamber" :governance))))
+  (is (= 11 (count (facts/by-topic "canadianchamber" :governance))))
+  (is (= 8 (count (facts/by-topic "canadianchamber" :history))))
+  (is (= 4 (count (facts/by-topic "canadianchamber" :policy))))
+  (is (= 3 (count (facts/by-topic "canadianchamber" :constitution))))
+  (is (= 3 (count (facts/by-topic "canadianchamber" :international))))
+  (is (= 3 (count (facts/by-topic "canadianchamber" :membership))))
+  (is (= 2 (count (facts/by-topic "canadianchamber" :trade))))
+  (is (= 1 (count (facts/by-topic "canadianchamber" :statute))))
   (is (empty? (facts/by-topic "canadianchamber" :labor)))
   (is (empty? (facts/by-topic "ibec" :governance))))
+
+(deftest every-entry-is-individually-addressable
+  ;; A catalog that reused an id would let one entry shadow another under
+  ;; :db.unique/identity, and the count assertions above would not notice.
+  (let [sb (facts/spec-basis "canadianchamber")]
+    (is (= (count sb) (count (into #{} (map :association-rule/id sb)))))
+    (is (every? #(re-matches #"canadianchamber\.[a-z0-9-]+" (:association-rule/id %)) sb))))
+
+(deftest every-entry-carries-a-source-and-says-whose-it-is
+  ;; The label has to match the host: an :official-chamber-ca entry that
+  ;; points anywhere but chamber.ca is a first-party claim nobody made.
+  (doseq [e (facts/spec-basis "canadianchamber")]
+    (testing (:association-rule/id e)
+      (is (re-matches #"https://\S+" (:association-rule/url e)))
+      (is (= ({:official-chamber-ca "chamber.ca"}
+              (:association-rule/url-provenance e))
+             (second (re-find #"^https://([^/]+)/" (:association-rule/url e)))))
+      (is (seq (:association-rule/source-quote e)))
+      (is (seq (:association-rule/topic e)))
+      (is (re-matches #"\d{4}-\d{2}-\d{2}" (:association-rule/retrieved-at e))))))
+
+(deftest a-dated-entry-quotes-its-date
+  ;; The year of every dated entry is in its own quote; an undated entry says
+  ;; why instead of silently carrying nothing.
+  (doseq [e (facts/spec-basis "canadianchamber")]
+    (testing (:association-rule/id e)
+      (if-let [d (or (:association-rule/established-date e)
+                     (:association-rule/last-revised-date e))]
+        (is (str/includes? (:association-rule/source-quote e) (subs d 0 4)))
+        (is (keyword? (:association-rule/date-unknown-because e)))))))
+
+(deftest no-office-holder-is-named
+  ;; The History page names office-holders next to four of its milestones.
+  ;; The quotes stop before each name; this pins that they still do.
+  (doseq [e (facts/spec-basis "canadianchamber")
+          nm ["Gundy" "McLeod" "Lafrance" "Hughes Anthony"]]
+    (is (not (str/includes? (str (:association-rule/title e) " "
+                                 (:association-rule/source-quote e))
+                            nm))
+        (str (:association-rule/id e) " names " nm))))

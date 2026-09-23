@@ -1,5 +1,5 @@
 (ns association-facts-kotoba-parity-test
-  "The CANADIANCHAMBER catalog in .cljc and in .kotoba, field by field.
+  "The Canadian Chamber of Commerce catalog in .cljc and in .kotoba, field by field.
 
   Both are readings of the same `data/datascript-tx.edn`, so this is not two
   implementations of a rule; it is one body of facts written twice, and the
@@ -25,16 +25,19 @@
 (def ^:private slug "canadianchamber")
 (def ^:private fields
   ["id" "title" "association" "isic" "country" "kind" "url" "url-provenance"
-   "established-date" "retrieved-at"])
-(def ^:private kw->field
-  {"id" :association-rule/id "title" :association-rule/title
-   "association" :association-rule/association "isic" :association-rule/isic
-   "country" :association-rule/country "kind" :association-rule/kind
-   "url" :association-rule/url "url-provenance" :association-rule/url-provenance
-   "established-date" :association-rule/established-date
-   "retrieved-at" :association-rule/retrieved-at})
+   "source-article" "source-quote" "established-date" "last-revised-date"
+   "date-unknown-because" "date-precision" "retrieved-at"])
+(defn- kw->field [f] (keyword "association-rule" f))
 (def ^:private entries (vec (facts/spec-basis slug)))
-(def ^:private topic-order [["governance"] ["governance"]])
+;; The order data/datascript-tx.edn writes each entry's :topic in.
+(def ^:private topic-order
+  [["governance" "history"] ["governance" "history"] ["governance" "history"]
+   ["governance" "constitution"] ["history" "international"]
+   ["governance" "constitution"] ["governance" "constitution" "statute"]
+   ["governance" "history"] ["history" "trade"] ["trade" "international"]
+   ["governance" "history"] ["history" "policy"] ["governance" "policy"]
+   ["governance"] ["policy" "governance" "membership"] ["membership" "policy"]
+   ["membership"] ["international"]])
 
 (deftest the-fixture-reads-a-real-catalog
   ;; An empty catalog compares equal to an empty port.
@@ -64,11 +67,14 @@
         (is (= nm (present (call 'topic slug i t))))))))
 
 (deftest by-topic-answers-the-same-entries
-  (doseq [names topic-order t names]
+  ;; Every position, not just the first: the hand-typed port answered only
+  ;; position 0, and a check of position 0 is what let that stand.
+  (doseq [t (distinct (apply concat topic-order))]
     (testing t
       (let [cljc (mapv :association-rule/id (facts/by-topic slug (keyword t)))]
         (is (= (count cljc) (call 'by-topic-count slug t)))
-        (is (= (first cljc) (present (call 'by-topic-id slug t 0)))))))
+        (is (= cljc (mapv #(present (call 'by-topic-id slug t %)) (range (count cljc)))))
+        (is (nil? (present (call 'by-topic-id slug t (count cljc))))))))
   (is (zero? (call 'by-topic-count slug "no-such-topic")))
   (is (nil? (present (call 'by-topic-id slug "no-such-topic" 0)))))
 
