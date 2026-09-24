@@ -49,7 +49,7 @@
 ;; either way, so a host that 404s properly and a skipped control do not look
 ;; the same.
 (ns verify-catalog
-  (:require [clojure.edn :as edn]
+  (:require [kotoba.lang.edn :as edn]
             [clojure.string :as str]
             ["fs" :as fs]
             ["os" :as os]
